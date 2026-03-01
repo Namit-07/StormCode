@@ -28,6 +28,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<ExplainRespon
       );
     }
 
+    if (message.includes("429") || message.includes("quota") || message.includes("Too Many Requests")) {
+      return NextResponse.json(
+        { success: false, error: "Gemini API quota exceeded. Please wait a few minutes or upgrade your plan at https://ai.google.dev" },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }

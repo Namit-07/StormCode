@@ -173,16 +173,16 @@ export async function fetchFileContents(
   owner: string,
   name: string,
   files: RepoFile[],
-  maxFiles: number = 80,
-  maxSizeKB: number = 100
+  maxFiles: number = 40,
+  maxSizeKB: number = 50
 ): Promise<RepoFile[]> {
   const octokit = createOctokit();
   const codeFiles = files
     .filter((f) => isCodeFile(f.path) && f.size < maxSizeKB * 1024)
     .slice(0, maxFiles);
 
-  // Fetch in parallel batches of 10
-  const BATCH_SIZE = 10;
+  // Fetch in parallel batches of 20
+  const BATCH_SIZE = 20;
   const results: RepoFile[] = [...files];
 
   for (let i = 0; i < codeFiles.length; i += BATCH_SIZE) {

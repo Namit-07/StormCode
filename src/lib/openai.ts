@@ -24,12 +24,12 @@ function buildRepoContext(
 
   const codeFiles = files
     .filter((f) => f.content)
-    .slice(0, 30); // Limit to keep within context window
+    .slice(0, 15); // Limit to keep within context window
 
   const codeSnippets = codeFiles
     .map((f) => {
-      const preview = f.content!.slice(0, 1500);
-      return `--- ${f.path} ---\n${preview}${f.content!.length > 1500 ? "\n... (truncated)" : ""}`;
+      const preview = f.content!.slice(0, 800);
+      return `--- ${f.path} ---\n${preview}${f.content!.length > 800 ? "\n... (truncated)" : ""}`;
     })
     .join("\n\n");
 
@@ -75,14 +75,7 @@ export async function generateExplanation(
   const client = getClient();
   const context = buildRepoContext(repo, files, depGraph);
 
-  const model = client.getGenerativeModel({
-    model: "gemini-2.0-flash",
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 4096,
-      responseMimeType: "application/json",
-    },
-  });
+  const models = (process.env.GEMINI_MODEL || "gemini-2.5-flash,gemini-2.0-flash").split(",").map(m => m.trim());
 
   const systemPrompt = `You are StormCode, an expert code educator who explains repositories to beginners.
 You analyze codebases and produce structured explanations in JSON format.
@@ -118,23 +111,50 @@ Guidelines:
 - The howItWorks should be a numbered walkthrough
 - Be specific to THIS codebase, not generic`;
 
-  const result = await model.generateContent({
-    contents: [
-      { role: "user", parts: [{ text: `${systemPrompt}\n\nAnalyze this repository and generate a beginner-friendly explanation:\n\n${context}` }] },
-    ],
-  });
+  let lastError: Error | null = null;
+  for (const modelName of models) {
+    try {
+      const model = client.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 4096,
+          responseMimeType: "application/json",
+        },
+      });
 
-  const content = result.response.text();
-  if (!content) {
-    throw new Error("Empty response from Gemini");
-  }
+      const result = await model.generateContent({
+        contents: [
+          { role: "user", parts: [{ text: `${systemPrompt}\n\nAnalyze this repository and generate a beginner-friendly explanation:\n\n${context}` }] },
+        ],
+      });
 
-  try {
-    const parsed = JSON.parse(content) as Explanation;
-    return parsed;
-  } catch {
-    throw new Error("Failed to parse AI response as JSON");
+      const content = result.response.text();
+      if (!content) {
+        throw new Error("Empty response from Gemini");
+      }
+
+      try {
+        const parsed = JSON.parse(content) as Explanation;
+        return parsed;
+      } catch {
+        throw new Error("Failed to parse AI response as JSON");
+      }
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const msg = lastError.message;
+      if (msg.includes("429") || msg.includes("quota") || msg.includes("Too Many Requests")) {
+        console.warn(`Gemini model ${modelName} rate limited, trying next model...`);
+        continue;
+      }
+      if (msg.includes("404") || msg.includes("not found")) {
+        console.warn(`Gemini model ${modelName} not available, trying next...`);
+        continue;
+      }
+      throw lastError;
+    }
   }
+  throw new Error(`Gemini API quota exceeded on all models. Please generate a new API key from a different Google Cloud project at https://aistudio.google.com/apikey`);
 }
 
 // ── Generate Explanation for a Single File ──────────────────────
@@ -146,8 +166,9 @@ export async function explainFile(
 ): Promise<string> {
   const client = getClient();
 
+  const modelName = process.env.GEMINI_MODEL?.split(",")[0] || "gemini-2.5-flash";
   const model = client.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: modelName,
     generationConfig: {
       temperature: 0.3,
       maxOutputTokens: 2048,

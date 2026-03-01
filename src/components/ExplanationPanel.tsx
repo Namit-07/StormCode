@@ -18,6 +18,7 @@ import type { TechStackItem } from "@/lib/types";
 export default function ExplanationPanel() {
   const analysis = useStormStore((s) => s.analysis);
   const progress = useStormStore((s) => s.progress);
+  const error = useStormStore((s) => s.error);
   const explanation = analysis?.explanation;
 
   if (progress.status === "explaining" && !explanation) {
@@ -41,9 +42,14 @@ export default function ExplanationPanel() {
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.06]">
           <Lightbulb className="h-7 w-7 text-zinc-600" />
         </div>
-        <h3 className="font-display text-lg font-medium text-zinc-400">No Explanation Yet</h3>
+        <h3 className="font-display text-lg font-medium text-zinc-400">Explanation Unavailable</h3>
         <p className="mt-2 max-w-md text-sm text-zinc-600">
-          Add a Gemini API key to your .env.local file to enable AI explanations.
+          {error && (error.includes("quota") || error.includes("429"))
+            ? "Gemini API rate limit reached. Wait a minute and try again."
+            : "AI explanation failed. Check your Gemini API key in .env.local or try again later."}
+        </p>
+        <p className="mt-3 text-xs text-zinc-700">
+          Tip: Other tabs (Dependencies, Flow Diagrams, File Tree) still work without AI.
         </p>
       </div>
     );

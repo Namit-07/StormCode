@@ -14,11 +14,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GitBranch, Brain, Sparkles, ArrowDown, Command } from "lucide-react";
 
 export default function Home() {
-  const { analysis, progress, activeTab } = useStormStore();
+  const { analysis, progress, activeTab, error } = useStormStore();
   const isAnalyzing = ["fetching", "parsing", "analyzing", "explaining"].includes(
     progress.status
   );
-  const showResults = analysis && progress.status === "complete";
+  const showResults = analysis && (progress.status === "complete" || progress.status === "explaining");
 
   return (
     <div className="relative min-h-screen noise-bg">
@@ -44,6 +44,16 @@ export default function Home() {
               exit={{ opacity: 0, y: -20 }}
               className="flex flex-col items-center pt-20 sm:pt-28"
             >
+              {/* Error banner */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 w-full max-w-2xl rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-center text-sm text-red-400 backdrop-blur-sm"
+                >
+                  {error}
+                </motion.div>
+              )}
               {/* Badge */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
