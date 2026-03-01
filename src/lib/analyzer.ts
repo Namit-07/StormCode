@@ -19,16 +19,25 @@ function truncate(str: string, max: number = 28): string {
 function sanitize(str: string): string {
   return str
     .replace(/[^\x20-\x7E]/g, "")              // keep only printable ASCII
-    .replace(/[[\](){}|<>#&";`]/g, "")
+    .replace(/[[\](){}|<>#&"';`\\]/g, "")      // strip chars that break Mermaid labels
     .replace(/\s+/g, " ")
     .trim();
 }
 
+/** Mermaid reserved keywords that cannot be used as node IDs */
+const MERMAID_RESERVED = new Set([
+  "end", "graph", "subgraph", "flowchart", "style", "classDef",
+  "direction", "click", "call", "callback", "note", "participant",
+  "actor", "as", "loop", "alt", "else", "opt", "par", "and",
+  "rect", "critical", "break", "title", "accTitle", "accDescr",
+]);
+
 /** Generate a safe Mermaid node ID from a file path */
 function nodeId(path: string): string {
   const id = path.replace(/[^a-zA-Z0-9]/g, "_");
-  // Ensure ID starts with a letter (Mermaid requirement)
-  return /^[a-zA-Z]/.test(id) ? id : "n_" + id;
+  // Ensure ID starts with a letter and is not a reserved keyword
+  const safe = /^[a-zA-Z]/.test(id) ? id : "n_" + id;
+  return MERMAID_RESERVED.has(safe.toLowerCase()) ? "n_" + safe : safe;
 }
 
 /** Generate a safe subgraph ID from a directory path */
@@ -44,7 +53,7 @@ function nodeStyle(type: DependencyNode["type"]): string {
     utility: ":::utility",
     module: ":::module",
     config: ":::config",
-    style: ":::style",
+    style: ":::cssfile",
     test: ":::test",
     external: ":::external",
   };
@@ -96,7 +105,7 @@ function generateDependencyMermaid(
     "  classDef utility fill:#06b6d4,stroke:#22d3ee,color:#fff",
     "  classDef module fill:#3b82f6,stroke:#60a5fa,color:#fff",
     "  classDef config fill:#f59e0b,stroke:#fbbf24,color:#000",
-    "  classDef style fill:#ec4899,stroke:#f472b6,color:#fff",
+    "  classDef cssfile fill:#ec4899,stroke:#f472b6,color:#fff",
     "  classDef test fill:#10b981,stroke:#34d399,color:#fff",
     "  classDef external fill:#6b7280,stroke:#9ca3af,color:#fff",
     "",
@@ -115,12 +124,11 @@ function generateDependencyMermaid(
   for (const [dir, groupNodes] of Array.from(dirGroups.entries())) {
     if (groupNodes.length > 1 && dir !== "root") {
       const sgId = subgraphId(dir);
-      const sgLabel = sanitize(dir);
+      const sgLabel = sanitize(dir) || dir.split("/").pop() || "group";
       lines.push(`  subgraph ${sgId}["${sgLabel}"]`);
-      lines.push(`    direction LR`);
       for (const node of groupNodes) {
         const id = nodeId(node.id);
-        const label = truncate(sanitize(node.label));
+        const label = truncate(sanitize(node.label)) || node.label.slice(0, 20) || "file";
         lines.push(`    ${id}["${label}"]${nodeStyle(node.type)}`);
       }
       lines.push("  end");
@@ -128,7 +136,7 @@ function generateDependencyMermaid(
     } else {
       for (const node of groupNodes) {
         const id = nodeId(node.id);
-        const label = truncate(sanitize(node.label));
+        const label = truncate(sanitize(node.label)) || node.label.slice(0, 20) || "file";
         lines.push(`  ${id}["${label}"]${nodeStyle(node.type)}`);
       }
     }
@@ -212,7 +220,7 @@ function generateArchitectureFlow(files: RepoFile[], repo: RepoInfo): FlowDiagra
   }
 
   if (layers.config) {
-    lines.push(`  LOGIC -.- CONFIG["Configuration"]:::sublayer`);
+    lines.push(`  LOGIC -.-> CONFIG["Configuration"]:::sublayer`);
   }
 
   // Add detail for each layer
