@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { LayoutDashboard, GitBranch, GitMerge, FolderTree } from "lucide-react";
+import { LayoutDashboard, GitBranch, GitMerge, FolderTree, BookMarked } from "lucide-react";
 import { useStormStore } from "@/store/useStore";
 import type { ActiveTab } from "@/lib/types";
 
@@ -26,6 +26,11 @@ const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     label: "File Tree",
     icon: <FolderTree className="h-4 w-4" />,
   },
+  {
+    id: "onboarding",
+    label: "Contribute",
+    icon: <BookMarked className="h-4 w-4" />,
+  },
 ];
 
 export default function TabView() {
@@ -40,7 +45,9 @@ export default function TabView() {
           className={`relative flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
             activeTab === tab.id
               ? "text-white"
-              : "text-zinc-500 hover:text-zinc-300"
+              : tab.id === "onboarding"
+                ? "text-storm-500 hover:text-storm-300"
+                : "text-zinc-500 hover:text-zinc-300"
           }`}
         >
           {activeTab === tab.id && (

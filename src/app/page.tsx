@@ -3,29 +3,18 @@
 import { useStormStore } from "@/store/useStore";
 import Header from "@/components/Header";
 import RepoInput from "@/components/RepoInput";
-import RepoHeader from "@/components/RepoHeader";
-import TabView from "@/components/TabView";
-import DependencyGraph from "@/components/DependencyGraph";
-import FlowDiagram from "@/components/FlowDiagram";
-import ExplanationPanel from "@/components/ExplanationPanel";
-import FileTree from "@/components/FileTree";
-import LoadingState from "@/components/LoadingState";
-import { motion, AnimatePresence } from "framer-motion";
-import { GitBranch, Brain, Sparkles, ArrowDown, Command } from "lucide-react";
+import { motion } from "framer-motion";
+import { GitBranch, Brain, Sparkles, Command } from "lucide-react";
 
 export default function Home() {
-  const { analysis, progress, activeTab, error } = useStormStore();
-  const isAnalyzing = ["fetching", "parsing", "analyzing", "explaining"].includes(
-    progress.status
-  );
-  const showResults = analysis && (progress.status === "complete" || progress.status === "explaining");
+  const { error } = useStormStore();
 
   return (
     <div className="relative min-h-screen noise-bg">
       {/* Aurora background blobs */}
       <div className="aurora-blob left-[10%] top-[5%] h-[500px] w-[500px] bg-storm-600" style={{ animationDelay: "0s" }} />
-      <div className="aurora-blob right-[10%] top-[15%] h-[400px] w-[400px] bg-purple-600" style={{ animationDelay: "4s" }} />
-      <div className="aurora-blob left-[30%] top-[40%] h-[350px] w-[350px] bg-cyan-600" style={{ animationDelay: "8s" }} />
+      <div className="aurora-blob right-[10%] top-[15%] h-[400px] w-[400px] bg-storm-700" style={{ animationDelay: "4s" }} />
+      <div className="aurora-blob left-[30%] top-[40%] h-[350px] w-[350px] bg-storm-500" style={{ animationDelay: "8s" }} />
 
       {/* Dot grid overlay */}
       <div className="dot-grid pointer-events-none fixed inset-0 z-0" />
@@ -34,16 +23,12 @@ export default function Home() {
       <Header />
 
       <main className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
-        <AnimatePresence mode="wait">
-          {!analysis && !isAnalyzing ? (
-            /* ── Landing View ──────────────────────────────── */
-            <motion.div
-              key="landing"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="flex flex-col items-center pt-20 sm:pt-28"
-            >
+        <motion.div
+          key="landing"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center pt-20 sm:pt-28"
+        >
               {/* Error banner */}
               {error && (
                 <motion.div
@@ -66,7 +51,7 @@ export default function Home() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-neon-emerald" />
                 </span>
                 <span className="text-xs font-medium text-zinc-400">
-                  Powered by Google Gemini AI
+                  Powered by AI
                 </span>
               </motion.div>
 
@@ -120,8 +105,8 @@ export default function Home() {
                   {
                     icon: <GitBranch className="h-5 w-5" />,
                     iconColor: "text-neon-cyan",
-                    glowColor: "shadow-cyan-500/20",
-                    bgColor: "from-cyan-500/10 to-transparent",
+                    glowColor: "shadow-orange-500/20",
+                    bgColor: "from-orange-500/10 to-transparent",
                     title: "Dependency Graph",
                     description:
                       "Interactive visual map of how every module connects. See the architecture at a glance.",
@@ -129,8 +114,8 @@ export default function Home() {
                   {
                     icon: <Brain className="h-5 w-5" />,
                     iconColor: "text-neon-violet",
-                    glowColor: "shadow-purple-500/20",
-                    bgColor: "from-purple-500/10 to-transparent",
+                    glowColor: "shadow-amber-500/20",
+                    bgColor: "from-amber-500/10 to-transparent",
                     title: "Flow Diagrams",
                     description:
                       "Auto-generated architecture, data flow, and request lifecycle visualizations.",
@@ -166,19 +151,9 @@ export default function Home() {
                 ))}
               </motion.div>
 
-              {/* Scroll indicator */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2 }}
-                className="mt-16 flex flex-col items-center gap-2 text-zinc-700"
-              >
-                <ArrowDown className="h-4 w-4 animate-bounce" />
-              </motion.div>
-
               {/* Footer */}
               <div className="mt-8 pb-8 text-center text-[11px] text-zinc-700">
-                Built with Next.js, Mermaid.js & Gemini &middot;{" "}
+                Built with Next.js, Mermaid.js &amp; Groq &middot;{" "}
                 <a
                   href="https://github.com/Namit-07/StormCode"
                   className="text-zinc-600 underline decoration-zinc-800 underline-offset-2 hover:text-zinc-400 transition-colors"
@@ -186,81 +161,7 @@ export default function Home() {
                   Star on GitHub
                 </a>
               </div>
-            </motion.div>
-          ) : isAnalyzing && !analysis ? (
-            /* ── Loading View ──────────────────────────────── */
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <LoadingState currentStatus={progress.status} />
-            </motion.div>
-          ) : showResults ? (
-            /* ── Results View ──────────────────────────────── */
-            <motion.div
-              key="results"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="py-6 space-y-5"
-            >
-              <RepoHeader />
-              <TabView />
-
-              {/* Tab content */}
-              <div className="min-h-[400px]">
-                <AnimatePresence mode="wait">
-                  {activeTab === "overview" && (
-                    <motion.div
-                      key="overview"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <ExplanationPanel />
-                    </motion.div>
-                  )}
-                  {activeTab === "dependencies" && (
-                    <motion.div
-                      key="dependencies"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <DependencyGraph />
-                    </motion.div>
-                  )}
-                  {activeTab === "flow" && (
-                    <motion.div
-                      key="flow"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <FlowDiagram />
-                    </motion.div>
-                  )}
-                  {activeTab === "files" && (
-                    <motion.div
-                      key="files"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <FileTree />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+        </motion.div>
       </main>
     </div>
   );

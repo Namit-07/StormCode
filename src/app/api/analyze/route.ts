@@ -54,6 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<AnalyzeRespon
       dependencyGraph,
       flowDiagrams,
       explanation: null,
+      onboardingGuide: null,
     };
 
     return NextResponse.json({ success: true, data: result });

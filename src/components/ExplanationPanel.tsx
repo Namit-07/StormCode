@@ -37,6 +37,7 @@ export default function ExplanationPanel() {
   }
 
   if (!explanation) {
+    const isQuota = error && (error.includes("quota") || error.includes("429") || error.includes("Too Many Requests"));
     return (
       <div className="flex flex-col items-center justify-center glass-card p-16 text-center">
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.06]">
@@ -44,10 +45,20 @@ export default function ExplanationPanel() {
         </div>
         <h3 className="font-display text-lg font-medium text-zinc-400">Explanation Unavailable</h3>
         <p className="mt-2 max-w-md text-sm text-zinc-600">
-          {error && (error.includes("quota") || error.includes("429"))
-            ? "Gemini API rate limit reached. Wait a minute and try again."
+          {isQuota
+            ? "Gemini API rate limit reached — free tier allows ~2 requests/min."
             : "AI explanation failed. Check your Gemini API key in .env.local or try again later."}
         </p>
+        {isQuota && (
+          <a
+            href="https://console.groq.com/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-storm-500/20 bg-storm-500/5 px-3 py-1.5 text-xs font-medium text-storm-400 transition-all hover:bg-storm-500/10 hover:text-storm-300"
+          >
+            Get a new Groq API key →
+          </a>
+        )}
         <p className="mt-3 text-xs text-zinc-700">
           Tip: Other tabs (Dependencies, Flow Diagrams, File Tree) still work without AI.
         </p>
@@ -165,8 +176,8 @@ export default function ExplanationPanel() {
 const accentMap: Record<string, { border: string; glow: string }> = {
   storm: { border: "border-storm-500/15", glow: "shadow-storm-500/5" },
   amber: { border: "border-amber-500/15", glow: "shadow-amber-500/5" },
-  violet: { border: "border-purple-500/15", glow: "shadow-purple-500/5" },
-  cyan: { border: "border-cyan-500/15", glow: "shadow-cyan-500/5" },
+  violet: { border: "border-storm-500/15", glow: "shadow-storm-500/5" },
+  cyan: { border: "border-storm-400/15", glow: "shadow-storm-400/5" },
   emerald: { border: "border-emerald-500/15", glow: "shadow-emerald-500/5" },
   rose: { border: "border-rose-500/15", glow: "shadow-rose-500/5" },
 };
@@ -207,10 +218,10 @@ function Section({
 function TechCard({ tech }: { tech: TechStackItem }) {
   const categoryColors: Record<string, { bg: string; text: string; dot: string }> = {
     framework: { bg: "bg-storm-500/8", text: "text-storm-400", dot: "bg-storm-500" },
-    language: { bg: "bg-purple-500/8", text: "text-purple-400", dot: "bg-purple-500" },
+    language: { bg: "bg-storm-600/8", text: "text-storm-400", dot: "bg-storm-600" },
     database: { bg: "bg-emerald-500/8", text: "text-emerald-400", dot: "bg-emerald-500" },
     tool: { bg: "bg-amber-500/8", text: "text-amber-400", dot: "bg-amber-500" },
-    library: { bg: "bg-cyan-500/8", text: "text-cyan-400", dot: "bg-cyan-500" },
+    library: { bg: "bg-storm-400/8", text: "text-storm-300", dot: "bg-storm-400" },
     service: { bg: "bg-rose-500/8", text: "text-rose-400", dot: "bg-rose-500" },
   };
 

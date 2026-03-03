@@ -92,6 +92,25 @@ export interface KeyFileExplanation {
   simpleExplanation: string;
 }
 
+// ── Onboarding Guide Types ──────────────────────────────────────
+export interface OnboardingStep {
+  title: string;
+  description: string;
+  commands?: string[];
+  files?: string[];
+  tip?: string;
+}
+
+export interface OnboardingGuide {
+  welcomeMessage: string;
+  prerequisites: string[];
+  setupSteps: OnboardingStep[];
+  firstContribution: OnboardingStep[];
+  codeConventions: string[];
+  architectureNotes: string;
+  goodFirstIssues: string[];
+}
+
 // ── Analysis Result ──────────────────────────────────────────────
 export interface AnalysisResult {
   repo: RepoInfo;
@@ -100,6 +119,7 @@ export interface AnalysisResult {
   dependencyGraph: DependencyGraph;
   flowDiagrams: FlowDiagram[];
   explanation: Explanation | null;
+  onboardingGuide: OnboardingGuide | null;
 }
 
 // ── UI State Types ───────────────────────────────────────────────
@@ -112,7 +132,7 @@ export type AnalysisStatus =
   | "complete"
   | "error";
 
-export type ActiveTab = "overview" | "dependencies" | "flow" | "files";
+export type ActiveTab = "overview" | "dependencies" | "flow" | "files" | "onboarding";
 
 export interface AnalysisProgress {
   status: AnalysisStatus;
@@ -140,5 +160,18 @@ export interface ExplainRequest {
 export interface ExplainResponse {
   success: boolean;
   data?: Explanation;
+  error?: string;
+}
+
+export interface OnboardRequest {
+  repo: RepoInfo;
+  files: RepoFile[];
+  dependencyGraph: DependencyGraph;
+  explanation: Explanation | null;
+}
+
+export interface OnboardResponse {
+  success: boolean;
+  data?: OnboardingGuide;
   error?: string;
 }

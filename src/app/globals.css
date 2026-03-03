@@ -48,14 +48,14 @@
   /* Premium gradient text */
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #818cf8 0%, #c084fc 25%, #22d3ee 50%, #818cf8 75%, #c084fc 100%);
+    background-image: linear-gradient(135deg, #f97316 0%, #ea580c 25%, #fb923c 50%, #f97316 75%, #ea580c 100%);
     background-size: 300% 300%;
     animation: gradient-flow 8s ease infinite;
   }
 
   .gradient-text-static {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #a5b4fc, #c084fc, #22d3ee);
+    background-image: linear-gradient(135deg, #fb923c, #f97316, #ea580c);
   }
 
   /* Glass card with frost effect */
@@ -74,10 +74,10 @@
     padding: 1px;
     background: linear-gradient(
       135deg,
-      rgba(129, 140, 248, 0.15),
+      rgba(249, 115, 22, 0.15),
       transparent 40%,
       transparent 60%,
-      rgba(34, 211, 238, 0.1)
+      rgba(234, 88, 12, 0.1)
     );
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     mask-composite: exclude;
@@ -94,7 +94,7 @@
   }
 
   .spotlight-card:hover {
-    border-color: rgba(129, 140, 248, 0.2);
+    border-color: rgba(249, 115, 22, 0.2);
     background: rgba(255, 255, 255, 0.03);
   }
 
@@ -107,7 +107,7 @@
     transition: opacity 0.3s ease;
     background: radial-gradient(
       500px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      rgba(129, 140, 248, 0.04),
+      rgba(249, 115, 22, 0.04),
       transparent 40%
     );
     pointer-events: none;
@@ -129,10 +129,10 @@
     border-radius: inherit;
     background: linear-gradient(
       90deg,
-      #818cf8,
-      #c084fc,
-      #22d3ee,
-      #818cf8
+      #f97316,
+      #ea580c,
+      #fb923c,
+      #f97316
     );
     background-size: 200% 100%;
     animation: border-flow 4s linear infinite;
@@ -147,12 +147,12 @@
   /* Neon glow button */
   .neon-btn {
     @apply relative overflow-hidden rounded-xl px-5 py-2.5 font-medium text-white transition-all;
-    background: linear-gradient(135deg, #6366f1, #7c3aed);
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+    background: linear-gradient(135deg, #ea580c, #f97316);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
   }
 
   .neon-btn:hover {
-    box-shadow: 0 0 30px rgba(99, 102, 241, 0.5), 0 0 60px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(255,255,255,0.15);
+    box-shadow: 0 0 30px rgba(249, 115, 22, 0.5), 0 0 60px rgba(249, 115, 22, 0.2), inset 0 1px 0 rgba(255,255,255,0.15);
     transform: translateY(-1px);
   }
 

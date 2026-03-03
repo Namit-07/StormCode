@@ -1,14 +1,14 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { RepoInfo, RepoFile, DependencyGraph, Explanation } from "./types";
+import Groq from "groq-sdk";
+import type { RepoInfo, RepoFile, DependencyGraph, Explanation, OnboardingGuide } from "./types";
 
-// ── Gemini Client ───────────────────────────────────────────────
+// ── Groq Client ─────────────────────────────────────────────────
 
-function getClient(): GoogleGenerativeAI {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getClient(): Groq {
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to your .env.local file.");
+    throw new Error("GROQ_API_KEY is not set. Add it to your .env.local file.");
   }
-  return new GoogleGenerativeAI(apiKey);
+  return new Groq({ apiKey });
 }
 
 // ── Build Context from Repo ────────────────────────────────────
@@ -75,7 +75,7 @@ export async function generateExplanation(
   const client = getClient();
   const context = buildRepoContext(repo, files, depGraph);
 
-  const models = (process.env.GEMINI_MODEL || "gemini-2.5-flash,gemini-2.0-flash").split(",").map(m => m.trim());
+  const models = (process.env.GROQ_MODEL || "llama-3.3-70b-versatile,llama-3.1-8b-instant").split(",").map(m => m.trim());
 
   const systemPrompt = `You are StormCode, an expert code educator who explains repositories to beginners.
 You analyze codebases and produce structured explanations in JSON format.
@@ -109,29 +109,28 @@ Guidelines:
 - Pick the 5-8 most important files for keyFiles
 - The beginnerAnalogy should be vivid, fun, and accurate
 - The howItWorks should be a numbered walkthrough
-- Be specific to THIS codebase, not generic`;
+- Be specific to THIS codebase, not generic
+- Respond ONLY with the JSON object, no markdown fences or extra text`;
 
   let lastError: Error | null = null;
   for (const modelName of models) {
     try {
-      const model = client.getGenerativeModel({
+      const completion = await client.chat.completions.create({
         model: modelName,
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 4096,
-          responseMimeType: "application/json",
-        },
-      });
-
-      const result = await model.generateContent({
-        contents: [
-          { role: "user", parts: [{ text: `${systemPrompt}\n\nAnalyze this repository and generate a beginner-friendly explanation:\n\n${context}` }] },
+        messages: [
+          {
+            role: "user",
+            content: `${systemPrompt}\n\nAnalyze this repository and generate a beginner-friendly explanation:\n\n${context}`,
+          },
         ],
+        response_format: { type: "json_object" },
+        temperature: 0.4,
+        max_tokens: 4096,
       });
 
-      const content = result.response.text();
+      const content = completion.choices[0]?.message?.content;
       if (!content) {
-        throw new Error("Empty response from Gemini");
+        throw new Error("Empty response from Groq");
       }
 
       try {
@@ -143,18 +142,18 @@ Guidelines:
     } catch (err: unknown) {
       lastError = err instanceof Error ? err : new Error(String(err));
       const msg = lastError.message;
-      if (msg.includes("429") || msg.includes("quota") || msg.includes("Too Many Requests")) {
-        console.warn(`Gemini model ${modelName} rate limited, trying next model...`);
+      if (msg.includes("429") || msg.includes("quota") || msg.includes("Too Many Requests") || msg.includes("rate_limit")) {
+        console.warn(`Groq model ${modelName} rate limited, trying next model...`);
         continue;
       }
-      if (msg.includes("404") || msg.includes("not found")) {
-        console.warn(`Gemini model ${modelName} not available, trying next...`);
+      if (msg.includes("404") || msg.includes("not found") || msg.includes("model_not_found")) {
+        console.warn(`Groq model ${modelName} not available, trying next...`);
         continue;
       }
       throw lastError;
     }
   }
-  throw new Error(`Gemini API quota exceeded on all models. Please generate a new API key from a different Google Cloud project at https://aistudio.google.com/apikey`);
+  throw new Error(`Groq API quota exceeded on all models. Please wait a minute or get a new API key at https://console.groq.com/keys`);
 }
 
 // ── Generate Explanation for a Single File ──────────────────────
@@ -166,14 +165,7 @@ export async function explainFile(
 ): Promise<string> {
   const client = getClient();
 
-  const modelName = process.env.GEMINI_MODEL?.split(",")[0] || "gemini-2.5-flash";
-  const model = client.getGenerativeModel({
-    model: modelName,
-    generationConfig: {
-      temperature: 0.3,
-      maxOutputTokens: 2048,
-    },
-  });
+  const modelName = process.env.GROQ_MODEL?.split(",")[0] || "llama-3.3-70b-versatile";
 
   const prompt = `You are StormCode, a friendly code explainer. Explain code files in simple terms.
 Use the "Explain Like I'm 5" approach:
@@ -193,6 +185,108 @@ ${content.slice(0, 4000)}
 \`\`\`
 ${content.length > 4000 ? "\n(File truncated for brevity)" : ""}`;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text() || "Could not generate explanation.";
+  const completion = await client.chat.completions.create({
+    model: modelName,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 2048,
+  });
+
+  return completion.choices[0]?.message?.content || "Could not generate explanation.";
 }
+
+// ── Generate Onboarding Guide ───────────────────────────────────
+
+export async function generateOnboardingGuide(
+  repo: RepoInfo,
+  files: RepoFile[],
+  depGraph: DependencyGraph,
+  explanation: Explanation | null
+): Promise<OnboardingGuide> {
+  const client = getClient();
+  const context = buildRepoContext(repo, files, depGraph);
+  const summaryContext = explanation
+    ? `\nProject Summary: ${explanation.summary}\nArchitecture: ${explanation.architecture}`
+    : "";
+
+  const models = (process.env.GROQ_MODEL || "llama-3.3-70b-versatile,llama-3.1-8b-instant").split(",").map(m => m.trim());
+
+  const systemPrompt = `You are StormCode, an expert developer advocate who writes onboarding guides for open-source contributors.
+Analyze the repository and generate a practical "How to Contribute" guide for new developers.
+
+ALWAYS respond with valid JSON matching this exact schema:
+{
+  "welcomeMessage": "A warm 2-3 sentence welcome message for new contributors specifically mentioning the project name and its purpose",
+  "prerequisites": ["list of tools/knowledge required before starting, e.g. 'Node.js 18+', 'Basic TypeScript knowledge'"],
+  "setupSteps": [
+    {
+      "title": "Step title",
+      "description": "What this step does and why",
+      "commands": ["command1", "command2"],
+      "files": ["relevant/config/file.json"],
+      "tip": "Optional pro tip for this step"
+    }
+  ],
+  "firstContribution": [
+    {
+      "title": "Task title",
+      "description": "Description of a good first task a new contributor could tackle",
+      "files": ["files/they/would/touch.ts"],
+      "tip": "Helpful tip for completing this task"
+    }
+  ],
+  "codeConventions": ["list of code style and convention rules inferred from the codebase"],
+  "architectureNotes": "A paragraph explaining what a new contributor must understand about the architecture before touching the code",
+  "goodFirstIssues": ["list of 3-5 concrete small improvements or features that a new contributor could implement"]
+}
+
+Guidelines:
+- Be specific to THIS codebase, not generic
+- Infer setup commands from package.json, Makefile, README, etc.
+- Identify real config files that need to be edited (like .env)
+- Make goodFirstIssues concrete and actionable
+- codeConventions should reflect actual patterns seen in the code
+- Respond ONLY with the JSON object, no markdown fences or extra text`;
+
+  let lastError: Error | null = null;
+  for (const modelName of models) {
+    try {
+      const completion = await client.chat.completions.create({
+        model: modelName,
+        messages: [
+          {
+            role: "user",
+            content: `${systemPrompt}\n\nGenerate an onboarding guide for new contributors to this repository:\n\n${context}${summaryContext}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+        max_tokens: 4096,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) throw new Error("Empty response from Groq");
+
+      try {
+        return JSON.parse(content) as OnboardingGuide;
+      } catch {
+        throw new Error("Failed to parse onboarding guide as JSON");
+      }
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const msg = lastError.message;
+      if (msg.includes("429") || msg.includes("quota") || msg.includes("Too Many Requests") || msg.includes("rate_limit")) {
+        console.warn(`Groq model ${modelName} rate limited, trying next...`);
+        continue;
+      }
+      if (msg.includes("404") || msg.includes("not found") || msg.includes("model_not_found")) {
+        console.warn(`Groq model ${modelName} not available, trying next...`);
+        continue;
+      }
+      throw lastError;
+    }
+  }
+  throw new Error("Groq API quota exceeded on all models.");
+}
+
+

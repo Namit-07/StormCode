@@ -6,6 +6,7 @@ import type {
   AnalysisProgress,
   ActiveTab,
   Explanation,
+  OnboardingGuide,
 } from "@/lib/types";
 
 // ── Store Interface ─────────────────────────────────────────────
@@ -20,11 +21,13 @@ interface StormState {
   progress: AnalysisProgress;
   activeTab: ActiveTab;
   error: string | null;
+  onboardingLoading: boolean;
 
   // Actions
   setActiveTab: (tab: ActiveTab) => void;
   startAnalysis: (repoUrl: string) => Promise<void>;
   setExplanation: (explanation: Explanation) => void;
+  setOnboardingGuide: (guide: OnboardingGuide) => void;
   reset: () => void;
 }
 
@@ -48,6 +51,7 @@ export const useStormStore = create<StormState>((set, get) => ({
   progress: initialProgress,
   activeTab: "overview",
   error: null,
+  onboardingLoading: false,
 
   // Actions
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -78,7 +82,10 @@ export const useStormStore = create<StormState>((set, get) => ({
       const analyzeData = await analyzeRes.json();
       if (!analyzeData.success) throw new Error(analyzeData.error ?? "Analysis failed");
 
-      const analysisResult = analyzeData.data as AnalysisResult;
+      const analysisResult: AnalysisResult = {
+        ...analyzeData.data,
+        onboardingGuide: null,
+      };
 
       set({
         analysis: analysisResult,
@@ -109,16 +116,51 @@ export const useStormStore = create<StormState>((set, get) => ({
               });
             }
           }
+        } else {
+          // Surface the explanation error (e.g. 429 quota) so the UI can show the right message
+          const errData = await explainRes.json().catch(() => ({}));
+          const errMsg = errData.error ?? `Explanation failed (${explainRes.status})`;
+          set({ error: errMsg });
+          console.warn("AI explanation failed:", errMsg);
         }
-      } catch {
+      } catch (explainErr) {
         // AI explanation is optional — don't fail the whole analysis
-        console.warn("AI explanation failed, continuing without it");
+        const msg = explainErr instanceof Error ? explainErr.message : "Explanation failed";
+        set({ error: msg });
+        console.warn("AI explanation failed:", msg);
       }
 
       set({
         progress: { status: "complete", message: "Analysis complete!", percent: 100 },
         activeTab: "overview",
       });
+
+      // Step 3: Generate onboarding guide in the background (non-blocking)
+      const latestAnalysis = get().analysis;
+      if (latestAnalysis) {
+        set({ onboardingLoading: true });
+        fetch("/api/onboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repo: latestAnalysis.repo,
+            files: latestAnalysis.files
+              .filter((f) => f.content)
+              .map((f) => ({ ...f, content: f.content?.slice(0, 2000) })),
+            dependencyGraph: latestAnalysis.dependencyGraph,
+            explanation: latestAnalysis.explanation,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.data) {
+              const cur = get().analysis;
+              if (cur) set({ analysis: { ...cur, onboardingGuide: data.data } });
+            }
+          })
+          .catch((e) => console.warn("Onboarding guide failed:", e))
+          .finally(() => set({ onboardingLoading: false }));
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An unknown error occurred";
       set({
@@ -135,12 +177,21 @@ export const useStormStore = create<StormState>((set, get) => ({
     }
   },
 
-  reset: () =>
+  setOnboardingGuide: (guide) => {
+    const current = get().analysis;
+    if (current) {
+      set({ analysis: { ...current, onboardingGuide: guide } });
+    }
+  },
+
+  reset: () => {
     set({
       repoUrl: "",
       analysis: null,
       progress: initialProgress,
       activeTab: "overview",
       error: null,
-    }),
+      onboardingLoading: false,
+    });
+  },
 }));

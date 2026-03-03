@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ExplainResponse } from "@/lib/types";
 import { generateExplanation } from "@/lib/openai";
 
+export const maxDuration = 60; // seconds – needed for Groq round-trips
+
 export async function POST(req: NextRequest): Promise<NextResponse<ExplainResponse>> {
   try {
     const body = await req.json();
@@ -21,16 +23,16 @@ export async function POST(req: NextRequest): Promise<NextResponse<ExplainRespon
     console.error("Explain API error:", err);
     const message = err instanceof Error ? err.message : "Explanation generation failed";
 
-    if (message.includes("GEMINI_API_KEY")) {
+    if (message.includes("GROQ_API_KEY")) {
       return NextResponse.json(
-        { success: false, error: "Gemini API key not configured. Add GEMINI_API_KEY to .env.local" },
+        { success: false, error: "Groq API key not configured. Add GROQ_API_KEY to .env.local" },
         { status: 500 }
       );
     }
 
-    if (message.includes("429") || message.includes("quota") || message.includes("Too Many Requests")) {
+    if (message.includes("429") || message.includes("quota") || message.includes("Too Many Requests") || message.includes("rate_limit")) {
       return NextResponse.json(
-        { success: false, error: "Gemini API quota exceeded. Please wait a few minutes or upgrade your plan at https://ai.google.dev" },
+        { success: false, error: "Groq API rate limit hit. Please wait a minute and try again." },
         { status: 429 }
       );
     }

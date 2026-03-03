@@ -49,7 +49,7 @@ export default function DependencyGraph() {
           </div>
           <div className="h-3 w-px bg-white/[0.06]" />
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50" />
+            <div className="h-2 w-2 rounded-full bg-storm-600 shadow-sm shadow-storm-600/50" />
             <span className="text-xs font-mono text-zinc-400">
               {graph.edges.length} connections
             </span>
@@ -60,8 +60,8 @@ export default function DependencyGraph() {
         <div className="flex flex-wrap items-center gap-3">
           {[
             { label: "Entry", color: "bg-storm-500" },
-            { label: "Component", color: "bg-purple-500" },
-            { label: "Utility", color: "bg-cyan-500" },
+            { label: "Component", color: "bg-storm-600" },
+            { label: "Utility", color: "bg-storm-400" },
             { label: "Config", color: "bg-amber-500" },
           ].map(({ label, color }) => (
             <div key={label} className="flex items-center gap-1.5">

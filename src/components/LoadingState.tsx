@@ -26,7 +26,7 @@ const STEPS: {
     status: "explaining",
     icon: <Sparkles className="h-4 w-4" />,
     label: "AI Explanation",
-    description: "Generating beginner-friendly explanations with Gemini...",
+    description: "Generating beginner-friendly explanations with Groq...",
   },
 ];
 
@@ -47,10 +47,10 @@ export default function LoadingState({ currentStatus }: { currentStatus: Analysi
 
             {/* Middle ring */}
             <div className="absolute -inset-3 rounded-full border border-white/[0.06]" />
-            <div className="absolute -inset-3 rounded-full border-t border-purple-500/40 animate-[spin_2s_linear_infinite_reverse]" />
+            <div className="absolute -inset-3 rounded-full border-t border-storm-600/40 animate-[spin_2s_linear_infinite_reverse]" />
 
             {/* Core */}
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-storm-500/20 to-purple-500/20 border border-white/[0.08]">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-storm-500/20 to-storm-600/20 border border-white/[0.08]">
               <Loader2 className="h-6 w-6 animate-spin text-storm-400" />
             </div>
 

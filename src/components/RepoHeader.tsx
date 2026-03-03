@@ -19,7 +19,7 @@ export default function RepoHeader() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {/* Repo icon */}
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-storm-500/20 to-purple-500/20 border border-white/[0.06]">
+          <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-storm-500/20 to-storm-600/20 border border-white/[0.06]">
             <Code2 className="h-5 w-5 text-storm-400" />
             <div className="absolute -inset-px rounded-xl bg-gradient-to-br from-storm-500/10 to-transparent" />
           </div>
